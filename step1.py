@@ -1,14 +1,11 @@
 from bs4 import BeautifulSoup
 import requests
 import re
+import json
 
 response = requests.get('https://www.amazon.in/dp/B07DJHY82F/ref=gbph_img_m-5_d182_b23b14bf?smid=A23AODI1X2CEAE&pf_rd_p=a3a8dc53-aeed-4aa1-88bb-72ce9ddad182&pf_rd_s=merchandised-search-5&pf_rd_t=101&pf_rd_i=1389401031&pf_rd_m=A1VBAL9TL5WCBF&pf_rd_r=P3FSQH2KEB3B5QQ1NQD5')
 
 soup = BeautifulSoup(response.content, 'html.parser')
-# soup = soup.prettify()
-# f = open('out.txt','w')
-# f.write(str(soup))
-# print(soup.prettify())
 
 main_dict = {}
 
@@ -25,17 +22,36 @@ main_dict = {
   }
 
 
+def fix(string):
+  string = string.replace('\n','')
+  string = string.replace('\t','')
+  string = string.replace(u"\xa0", u" ")
+  string = string.replace('\s','')
+  return string
+
+
+def for_select(tag ,name):
+  temp = soup.select_one(tag).text
+  main_dict[name].append(temp)
+
+
 # title
-title = soup.select_one('span#productTitle').text
-main_dict['title'].append(title)
+
+for_select('span#productTitle','title')
 
 #description
-description = soup.select_one('div#productDescription').text
-main_dict['description'].append(description)
 
-#star rating
-rating = soup.select_one('i.a-icon.a-icon-star').text
-main_dict['rating'].append(rating)
+for_select('div#productDescription','description')
+
+
+# #star rating
+
+for_select('i.a-icon.a-icon-star','rating')
+
+# #no of reviews
+
+for_select('span#acrCustomerReviewText','reviews')
+
 
 #colors
 colors = soup.find_all('li')
@@ -51,9 +67,6 @@ for i in colors:
       main_dict['colors'].append(temp['title'])  
       # print(temp['title'])
 
-#no of reviews
-reviews = soup.select_one('span#acrCustomerReviewText').text
-main_dict['reviews'].append(reviews)
 
 # details of product
 details_div = soup.find_all('div',class_ = "pdTab")
@@ -64,30 +77,37 @@ details =  details_div[0].find_all('tr')
 details_dict = {}
 for i in details:
   td = i.find_all('td')
-  details_dict[td[0].text] = td[1].text 
+  td[0] = fix(td[0].text)
+  td[1] = fix(td[1].text)
+
+  if(td[0] == '' or td[1] == '' ):
+    continue
+  details_dict[td[0]] = td[1]
 
 main_dict['details'] = details_dict
 
 # detail image
 
 
-allimg = soup.find_all('img')
-# print(allimg.attrs)
+allimg = soup.find_all('img',id = 'landingImage')
+# print(allimg)
 
 for i in allimg:
   # print(i.attrs)
   temp = dict(i.attrs)
   if 'id' in temp.keys():
-    if(temp['id'] == 'detailImage'):
-      main_dict['img'].append(temp['src'])
+    main_dict['img'].append(temp['src'])
 
 
 #price
 
-# price_without = soup.select_one('span.a-section.a-spacing-none.a-padding-none')
+price_without = soup.select_one('span#priceblock_ourprice').text
 
-# print(price_without)
+price_with = soup.select_one('span.a-color-price').text
+# print(price_with)
 
+
+main_dict['price'] = [fix(price_without),fix(price_with)]
 
 
 # reviews text
@@ -109,14 +129,37 @@ for i in range(10):
 print(cnt)
 print(revs_list)
 
-# revs = soup.find_all('a' , class_ = 'review-title') 
+# main_dict['revs'] = revs_list
 
-# for i in revs:
-#   print(i.find_all('span'))
+
+for i in main_dict:
+  if(i == 'details'):
+    continue
+  temp = main_dict[i]  
+  # print(temp)
+  if(len(temp)>0):
+    string = temp[0]
+    string = fix(string)
+    temp[0] = string
+  # print(temp)
+  # break
+  # for j in temp:
+  #   fix(j)
+  #   print(j)
+  #   break
 
 
 
 # main DS with all fields
 print(main_dict)
 
+
+# print(main_dict['title'][0].replace('\s',''))
+
+out = open('words.json', 'w')
+
+wordsJson = json.dumps(main_dict)
+
+# print(wordsJson)
+out.write((wordsJson))
 
