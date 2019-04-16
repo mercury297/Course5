@@ -6,7 +6,7 @@ The data from the given link was scraped using   _BeautifulSoup4_
 
 The given features were extracted and the data was cleaned.
 
-This is done in the file Markup :  step1.py
+This is done in the file _step1.py_
 
  ## Step 2 ##
 
